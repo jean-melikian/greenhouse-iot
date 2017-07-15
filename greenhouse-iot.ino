@@ -1,9 +1,11 @@
 /*
  * Links:
  * https://www.carnetdumaker.net/articles/utiliser-des-leds-rgb-avec-une-carte-arduino-genuino/
+ * 
  */
 
 #include <Ethernet.h>
+#include "DHT.h"
 
 #define WDWAIT      20000  // Timeout de reponse serveur IoT
 #define WDREAD      5000   // Timeout de lecture serveur IoT
@@ -12,29 +14,32 @@
 
 #define MAX_RESPONSE  1024
 
-#define NB_SENSORS 2
+#define DHTPIN 2
+#define DHTTYPE DHT11   // DHT 11
+
+#define NB_SENSORS 4
 
 // PINS
 // ANALOG
-const int PIN_SENSOR_HYGROMETER = A0; // soil humidity
+const int PIN_SENSOR_SOIL_HUMIDITY = A0; // soil humidity
 const int PIN_SENSOR_LUMINOSITY = A1; // luminosity
 // PWM
 const int PIN_LED_R = 9;
 const int PIN_LED_G = 10;
 const int PIN_LED_B = 11;
 
-// SENSORS VALUES
-int humidity = 0;
-int luminosity = 0;
+// INIT DHT11
+DHT dht(DHTPIN, DHTTYPE);
 
 // NETWORK INTERFACE CLIENT
 EthernetClient client;
 
 // API CONFIGURATION
 boolean http_debug_enabled = true;
-const char* server = "192.168.1.14";
-int port = 3000;
-char* api_token = "Basic a362b247ad991a9da225c0d31549480f4c727764050e633cff3bcc7d390d3ed9";
+const char* server = "dev.greenduino.info";
+int port = 80;
+char* plant_id = "656a8ac1-bebb-4b7a-acf8-dcdf1ca88f06";
+
 
 // ROUTES
 const char *route = "sensors";
@@ -44,7 +49,7 @@ char body[2048];
 char buffer[2048];
 char response[MAX_RESPONSE];
 
-char* sensors[] = {"hygrometer", "luminosity"};
+char* sensors[] = {"soil_humidity", "luminosity", "air_humidity", "temperature"};
 int values[NB_SENSORS];
 // -------------------------------------------------------------------
 // -- BEGINNING OF THE CODE ------------------------------------------
@@ -52,7 +57,8 @@ int values[NB_SENSORS];
 // INITIALIZATION, executed only once
 void setup() {
   Serial.begin(9600);
-  pinMode(PIN_SENSOR_HYGROMETER, INPUT); // soil  humidity
+  dht.begin();
+  pinMode(PIN_SENSOR_SOIL_HUMIDITY, INPUT); // soil  humidity
   pinMode(PIN_SENSOR_LUMINOSITY, INPUT); // luminosity
   pinMode(PIN_LED_R, OUTPUT); // RGB LED -> R
   pinMode(PIN_LED_G, OUTPUT); // RGB LED -> G
@@ -86,32 +92,15 @@ void loop() {
 }
 
 //////////////////////// SENSORS /////////////////
-char* fetch_hygrometry() {
-  
-  Serial.print(humidity); Serial.print(" - ");
-  
-  if(humidity >= 1000) {
-   Serial.println("Hygrometer is not in the Soil or DISCONNECTED");
-  }
-  if(humidity < 1000 && humidity >= 600) { 
-   Serial.println("Soil is DRY");
-  }
-  if(humidity < 600 && humidity >= 370) {
-   Serial.println("Soil is HUMID"); 
-  }
-  if(humidity < 370) {
-   Serial.println("Hygrometer in WATER");
-  }
-  
-}
+
 void sensors_to_json(char* body) {
 
-  int values[] = {analogRead(PIN_SENSOR_HYGROMETER), analogRead(PIN_SENSOR_LUMINOSITY)};
+  int values[] = {analogRead(PIN_SENSOR_SOIL_HUMIDITY), analogRead(PIN_SENSOR_LUMINOSITY), dht.readHumidity(), dht.readTemperature()};
   char entry[255];
   sprintf(body, "{");
   
   for(int i = 0; i < NB_SENSORS; i++) {
-    sprintf(entry, "\"%s\":\"%d\"%c", sensors[i], values[i], (i < NB_SENSORS - 1)?',':'}');
+    sprintf(entry, "\"%s\":\"%f\"%c", sensors[i], (float) values[i], (i < NB_SENSORS - 1)?',':'}');
     strcat(body, entry);
   }
 }
@@ -172,7 +161,7 @@ void GET_request(char* buffer, const char* route)
   print_request(buffer);
 
   // Authorization header
-  sprintf(buffer, "Authorization: %s", api_token);
+  //sprintf(buffer, "Authorization: %s", api_token);
   //print_request(buffer);
   
   // Host header
@@ -199,6 +188,10 @@ void send_post_sensor(char* body)
     
   // Host header
   sprintf(buffer, "Host: %s", server);
+  print_request(buffer);
+
+  // plant_id header
+  sprintf(buffer, "PlantId: %s", plant_id);
   print_request(buffer);
 
   // JSON content type
