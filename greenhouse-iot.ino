@@ -1,6 +1,8 @@
 /*
  * Links:
  * https://www.carnetdumaker.net/articles/utiliser-des-leds-rgb-avec-une-carte-arduino-genuino/
+ * 
+ * uuid generator: https://www.uuidgenerator.net/
  */
 
 #include <Ethernet.h>
@@ -32,9 +34,10 @@ EthernetClient client;
 
 // API CONFIGURATION
 boolean http_debug_enabled = true;
-const char* server = "192.168.1.14";
-int port = 3000;
-char* api_token = "Basic a362b247ad991a9da225c0d31549480f4c727764050e633cff3bcc7d390d3ed9";
+const char* server = "dev.greenduino.info";
+int port = 80;
+char* plant_id = "656a8ac1-bebb-4b7a-acf8-dcdf1ca88f06";
+
 
 // ROUTES
 const char *route = "sensors";
@@ -172,7 +175,7 @@ void GET_request(char* buffer, const char* route)
   print_request(buffer);
 
   // Authorization header
-  sprintf(buffer, "Authorization: %s", api_token);
+  //sprintf(buffer, "Authorization: %s", api_token);
   //print_request(buffer);
   
   // Host header
@@ -199,6 +202,10 @@ void send_post_sensor(char* body)
     
   // Host header
   sprintf(buffer, "Host: %s", server);
+  print_request(buffer);
+
+  // plant_id header
+  sprintf(buffer, "PlantId: %s", uuid);
   print_request(buffer);
 
   // JSON content type
