@@ -1,6 +1,6 @@
 /*
- * Links:
- * https://www.carnetdumaker.net/articles/utiliser-des-leds-rgb-avec-une-carte-arduino-genuino/
+ * Requirements:
+ * Adafruit's DHT sensors library: https://github.com/adafruit/DHT-sensor-library
  * 
  */
 
@@ -9,8 +9,8 @@
 
 #define WDWAIT      20000  // Timeout de reponse serveur IoT
 #define WDREAD      5000   // Timeout de lecture serveur IoT
-#define REQUEST_INTERVAL 5 // in seconds
-#define RETRY_INTERVAL 5 // interval when the request have failed
+#define REQUEST_INTERVAL 30 // in seconds
+#define RETRY_INTERVAL 60 // delay after a request failure
 
 #define MAX_RESPONSE  1024
 
@@ -35,10 +35,10 @@ DHT dht(DHTPIN, DHTTYPE);
 EthernetClient client;
 
 // API CONFIGURATION
-boolean http_debug_enabled = true;
+boolean http_debug_enabled = false;
 const char* server = "dev.greenduino.info";
 int port = 80;
-char* plant_id = "656a8ac1-bebb-4b7a-acf8-dcdf1ca88f06";
+char* plant_id = "656a8ac1-bebb-4b7a-acf8-dcdf1ca88f06"; // Unused but could be used to identify a plant against the API
 
 
 // ROUTES
@@ -117,9 +117,7 @@ void displayColor(byte r, byte g, byte b) {
 
 void print_request(char* buffer) {
   client.println(buffer);
-  if(http_debug_enabled) {
-    Serial.println(buffer);
-  }
+  Serial.println(buffer);
 }
 
 boolean send_values(char* body)
@@ -152,7 +150,7 @@ boolean connect(void)
   }
 }
 
-// GET request
+// GET request -- unused but could be useful in the future
 void GET_request(char* buffer, const char* route)
 {  
   // POST URI
